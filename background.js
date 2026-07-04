@@ -1,13 +1,21 @@
 const MAX_DYNAMIC_RULES = 5000;
 const BLOCK_PRIORITY = 1;
 
+const BLOCKED_PAGE_URL = chrome.runtime.getURL("blocked.html");
+
 async function rebuildRules() {
   try {
-    const sync = await chrome.storage.sync.get(["enabled", "blockedDomains", "disabledBlockedDomains", "redirectEnabled", "redirectUrl"]);
+    const sync = await chrome.storage.sync.get(["enabled", "blockedDomains", "disabledBlockedDomains", "redirectEnabled", "redirectUrl", "showBlockPage"]);
     if (!sync.enabled) { await clearAllRules(); return; }
 
-    const action = sync.redirectEnabled && sync.redirectUrl
-      ? { type: "redirect", redirect: { url: sync.redirectUrl } }
+    let redirectUrl = null;
+    if (sync.redirectEnabled && sync.redirectUrl) {
+      redirectUrl = sync.redirectUrl;
+    } else if (sync.showBlockPage) {
+      redirectUrl = BLOCKED_PAGE_URL;
+    }
+    const action = redirectUrl
+      ? { type: "redirect", redirect: { url: redirectUrl } }
       : { type: "block" };
 
     const manualDisabled = new Set((sync.disabledBlockedDomains || []).map(d => d.toLowerCase()));
@@ -45,7 +53,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   try {
     const data = await chrome.storage.sync.get(["blockedDomains", "pinHash"]);
     if (!Array.isArray(data.blockedDomains)) {
-      await chrome.storage.sync.set({ enabled: true, blockedDomains: [], disabledBlockedDomains: [], redirectEnabled: false, redirectUrl: "", enabledPresets: [] });
+      await chrome.storage.sync.set({ enabled: true, blockedDomains: [], disabledBlockedDomains: [], redirectEnabled: false, redirectUrl: "", enabledPresets: [], showBlockPage: false });
     }
     if (!data.pinHash) await chrome.storage.sync.set({ pinHash: await hashPin("0000") });
   } catch (e) {

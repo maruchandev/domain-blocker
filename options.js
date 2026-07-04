@@ -30,7 +30,7 @@ async function bg(method, data = {}) {
 }
 
 async function loadData() {
-  const sync = await chrome.storage.sync.get(["enabled", "blockedDomains", "disabledBlockedDomains", "redirectEnabled", "redirectUrl", "pinHash", "enabledPresets"]);
+  const sync = await chrome.storage.sync.get(["enabled", "blockedDomains", "disabledBlockedDomains", "redirectEnabled", "redirectUrl", "pinHash", "enabledPresets", "showBlockPage"]);
   return { sync };
 }
 
@@ -114,6 +114,11 @@ async function handlePresetToggle(key, on) {
   renderAll();
 }
 
+async function renderBlockedPage() {
+  const { sync } = await loadData();
+  document.getElementById("blocked-page-toggle").checked = sync.showBlockPage || false;
+}
+
 async function renderRedirect() {
   const { sync } = await loadData();
   document.getElementById("redirect-toggle").checked = sync.redirectEnabled || false;
@@ -124,6 +129,7 @@ async function renderAll() {
   renderGlobalToggle();
   renderPresets();
   renderBlocklist();
+  renderBlockedPage();
   renderRedirect();
 }
 
@@ -155,6 +161,10 @@ document.getElementById("blocklist-add-btn").addEventListener("click", async () 
 });
 document.getElementById("blocklist-input").addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("blocklist-add-btn").click();
+});
+
+document.getElementById("blocked-page-toggle").addEventListener("change", (e) => {
+  chrome.storage.sync.set({ showBlockPage: e.target.checked }).catch(console.error);
 });
 
 document.getElementById("redirect-save-btn").addEventListener("click", async () => {
